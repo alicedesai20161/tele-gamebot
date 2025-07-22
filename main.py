@@ -1,7 +1,6 @@
 import os
-import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,11 +22,7 @@ GAMES = {
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton(game, callback_data=game)] for game in GAMES]
-    await update.message.reply_text(
-        "🎮 *Choose a game to unlock cheats:*",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text("🎮 Choose a game to unlock cheats:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -35,22 +30,14 @@ async def handle_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game = query.data
     cheats = GAMES[game]["cheats"]
     cheats_text = "\n".join([f"✅ {c}" for c in cheats])
-    await query.edit_message_text(
-        f"🔓 *{game}* Cheats Unlocked:\n\n{cheats_text}\n\nGenerating mod tools...",
-        parse_mode="Markdown"
-    )
-    await query.message.reply_text(
-        "👇 Tap below to access your tools:",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🚀 Open Mods", url=GAMES[game]["lp"] + f"?mod={game.replace(' ', '%20')}+Mod+Unlocker")]
-        ])
-    )
+    await query.edit_message_text(f"🔓 *{game}* Cheats Unlocked:\n\n{cheats_text}\n\nGenerating mod tools...", parse_mode="Markdown")
+    await query.message.reply_text("👇 Tap below to access your tools:", reply_markup=InlineKeyboardMarkup([
+        [InlineKeyboardButton("🚀 Open Mods", url=GAMES[game]["lp"] + f"?mod={game.replace(' ', '%20')}+Mod+Unlocker")]
+    ]))
 
-async def main():
+# ✅ No need to wrap in asyncio.run()
+if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_game))
-    await app.run_polling()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    app.run_polling()
