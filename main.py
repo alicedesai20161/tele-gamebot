@@ -1,6 +1,8 @@
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +22,19 @@ GAMES = {
     "COD Warzone": {"cheats": ["Aimbot", "Wall Hack", "No Recoil"], "lp": "https://warzone-cod.netlify.app/"}
 }
 
+# === /ping Server for UptimeRobot ===
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/ping":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Pong")
+
+def run_ping_server():
+    server = HTTPServer(("", 10000), PingHandler)
+    server.serve_forever()
+
+# === Telegram Bot Handlers ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton(game, callback_data=game)] for game in GAMES]
     await update.message.reply_text("🎮 Choose a game to unlock cheats:", reply_markup=InlineKeyboardMarkup(keyboard))
@@ -35,9 +50,10 @@ async def handle_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🚀 Open Mods", url=GAMES[game]["lp"] + f"?mod={game.replace(' ', '%20')}+Mod+Unlocker")]
     ]))
 
-# ✅ No need to wrap in asyncio.run()
+# === Start Everything ===
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    threading.Thread(target=run_ping_server, daemon=True).start()
+    app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_game))
-    app.run_polling()
+    app.run_polling(close_loop=False)
